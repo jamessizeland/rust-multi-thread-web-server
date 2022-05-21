@@ -19,10 +19,16 @@ fn main() {
 }
 
 fn handle_connection(mut stream: TcpStream) {
-    let mut buffer = [0; 1024]; // 1024 bytes in size
     println!("Connection Established!!");
 
+    // read http get request
+    let mut buffer = [0; 1024]; // 1024 bytes in size
     stream.read(&mut buffer).unwrap();
     println!("Request {}", String::from_utf8_lossy(&buffer[..]));
     // The “lossy” part of the name indicates the behavior of this function when it sees an invalid UTF-8 sequence
+
+    // respond to http get request
+    let response = "HTTP/1.1 200 OK\r\n\r\n";
+    stream.write(response.as_bytes()).unwrap();
+    stream.flush().unwrap(); // wait and prevent the program from continuing until all the bytes are written to the connection
 }
