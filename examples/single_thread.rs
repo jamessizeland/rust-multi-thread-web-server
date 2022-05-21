@@ -1,17 +1,16 @@
+use std::fs;
 use std::io::prelude::*; // We bring into scope to get access to certain traits that let us read from and write to the stream
 use std::net::{TcpListener, TcpStream};
-use std::time::Duration;
-use std::{fs, thread};
 
-/// Main
+/// Simple TCP Web Service
 ///
 /// nonadministrators can listen only on ports higher than 1023
 ///
-/// <https://doc.rust-lang.org/book/ch20-02-multithreaded.html>
+/// <https://doc.rust-lang.org/book/ch20-01-single-threaded.html>
 ///
 /// Because we’re writing a basic server just for learning purposes, we won’t worry about handling these kinds of errors; instead, we use unwrap to stop the program if errors happen.
 fn main() {
-    println!("Hello, from my slow web service");
+    println!("Hello, from my web service");
     let listener = TcpListener::bind("localhost:7878").unwrap();
     // A single stream represents an open connection between the client and the server
     for stream in listener.incoming() {
@@ -30,13 +29,8 @@ fn handle_connection(mut stream: TcpStream) {
     // The “lossy” part of the name indicates the behavior of this function when it sees an invalid UTF-8 sequence
 
     // respond to http get request
-    let get = b"GET / HTTP/1.1\r\n";
-    let sleep = b"GET /sleep HTTP/1.1\r\n";
-
+    let get = b"GET / HTTP/1.1\r\n"; // bytestring format
     let (status_line, filename) = if buffer.starts_with(get) {
-        ("HTTP/1.1 200 OK", "hello.html")
-    } else if buffer.starts_with(sleep) {
-        thread::sleep(Duration::from_secs(5));
         ("HTTP/1.1 200 OK", "hello.html")
     } else {
         ("HTTP/1.1 404 NOT FOUND", "404.html")

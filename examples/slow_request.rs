@@ -3,7 +3,7 @@ use std::net::{TcpListener, TcpStream};
 use std::time::Duration;
 use std::{fs, thread};
 
-/// Main
+/// Simulate a Slow Request
 ///
 /// nonadministrators can listen only on ports higher than 1023
 ///
