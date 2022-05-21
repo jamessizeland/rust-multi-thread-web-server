@@ -1,3 +1,4 @@
+use std::fs;
 use std::io::prelude::*; // We bring into scope to get access to certain traits that let us read from and write to the stream
 use std::net::{TcpListener, TcpStream};
 
@@ -28,7 +29,13 @@ fn handle_connection(mut stream: TcpStream) {
     // The “lossy” part of the name indicates the behavior of this function when it sees an invalid UTF-8 sequence
 
     // respond to http get request
-    let response = "HTTP/1.1 200 OK\r\n\r\n";
+    let contents = fs::read_to_string("hello.html").unwrap();
+    let response = format!(
+        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
+        contents.len(),
+        contents
+    );
+
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap(); // wait and prevent the program from continuing until all the bytes are written to the connection
 }
