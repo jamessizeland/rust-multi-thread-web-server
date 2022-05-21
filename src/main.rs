@@ -29,9 +29,17 @@ fn handle_connection(mut stream: TcpStream) {
     // The “lossy” part of the name indicates the behavior of this function when it sees an invalid UTF-8 sequence
 
     // respond to http get request
-    let contents = fs::read_to_string("hello.html").unwrap();
+    let get = b"GET / HTTP/1.1\r\n"; // bytestring format
+    let (status_line, filename) = if buffer.starts_with(get) {
+        ("HTTP/1.1 200 OK", "hello.html")
+    } else {
+        ("HTTP/1.1 404 NOT FOUND", "404.html")
+    };
+
+    let contents = fs::read_to_string(filename).unwrap();
     let response = format!(
-        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
+        "{}\r\nContent-Length: {}\r\n\r\n{}",
+        status_line,
         contents.len(),
         contents
     );
