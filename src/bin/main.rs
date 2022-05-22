@@ -2,6 +2,7 @@ use std::io::prelude::*; // We bring into scope to get access to certain traits 
 use std::net::{TcpListener, TcpStream};
 use std::time::Duration;
 use std::{fs, thread};
+use webserver::ThreadPool;
 
 /// Main
 ///
@@ -13,13 +14,19 @@ use std::{fs, thread};
 fn main() {
     println!("Hello, from my slow web service");
     let listener = TcpListener::bind("localhost:7878").unwrap();
+    let pool = ThreadPool::new(4);
+
     // A single stream represents an open connection between the client and the server
     for stream in listener.incoming() {
         let stream = stream.unwrap();
-        handle_connection(stream);
+
+        pool.execute(|| {
+            handle_connection(stream);
+        });
     }
 }
 
+/// Handle routing of requests
 fn handle_connection(mut stream: TcpStream) {
     println!("Connection Established!!");
 
