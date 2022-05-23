@@ -8,7 +8,7 @@ use std::{
 /// Instead of storing a vector of JoinHandle<()> instances in the thread pool, we’ll store instances of the Worker struct. Each Worker will store a single JoinHandle<()> instance. Then we’ll implement a method on Worker that will take a closure of code to run and send it to the already running thread for execution. We’ll also give each worker an id so we can distinguish between the different workers in the pool when logging or debugging.
 struct Worker {
     id: usize,
-    thread: JoinHandle<()>,
+    thread: Option<JoinHandle<()>>, // https://doc.rust-lang.org/nightly/core/option/index.html
 }
 
 impl Worker {
@@ -25,7 +25,7 @@ impl Worker {
 
             job(); // we can execute any function here, sent to this worker
         });
-        Worker { id, thread }
+        Worker { id, thread: Some(thread) }
     }
 }
 
@@ -75,5 +75,19 @@ impl ThreadPool {
         let job = Box::new(f);
 
         self.sender.send(job).unwrap();
+    }
+}
+
+impl Drop for ThreadPool {
+    fn drop(&mut self) {
+        for worker in &mut self.workers {
+            println!("Shutting down worker {}", worker.id);
+
+            // if Worker holds an Option<thread::JoinHandle<()>> instead, we can call the take method on the Option to move the value out of the Some variant and leave a None variant in its place, i.e. a Worker that is running will have a Some variant in thread, and when we want to clean up a Worker, we’ll replace Some with None so the Worker doesn’t have a thread to run.
+            if let Some(thread) = worker.thread.take() {
+                // remove Some thread and replace with None, do nothing otherwise
+                thread.join().expect("failed to gracefully shutdown a thread");
+            }
+        }
     }
 }
