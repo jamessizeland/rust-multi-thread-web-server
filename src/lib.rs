@@ -1,5 +1,5 @@
 use std::{
-    sync::mpsc,
+    sync::{mpsc, Arc, Mutex},
     thread::{spawn, JoinHandle},
 };
 
@@ -12,8 +12,12 @@ struct Worker {
 }
 
 impl Worker {
-    fn new(id: usize) -> Worker {
-        let thread = spawn(|| {}); // run when thread is created
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
+        let thread = spawn(|| {
+            // run when thread is created
+            // give it a receiving end in the thread that the workers spawn
+            receiver;
+        });
         Worker { id, thread }
     }
 }
@@ -37,14 +41,17 @@ impl ThreadPool {
     pub fn new(size: usize) -> ThreadPool {
         assert!(size > 0); // unrecoverable error if zero entered
 
-        // initialize queue channels https://doc.rust-lang.org/std/sync/mpsc/fn.channel.html
-        let (sender, reciever) = mpsc::channel();
+        // initialize new async channel https://doc.rust-lang.org/std/sync/mpsc/fn.channel.html
+        let (sender, receiver) = mpsc::channel();
+
+        // Need thread-safe smart pointers to share ownership across multiple threads and allow the threads to mutate the value, we need to use Arc<Mutex<T>>. The Arc type will let multiple workers own the receiver, and Mutex will ensure that only one worker gets a job from the receiver at a time.
+        let receiver = Arc::new(Mutex::new(receiver));
 
         let mut workers = Vec::with_capacity(size); // like vec::new but preallocates space in the vector
 
         for id in 0..size {
             // create some threads and store them in the vector
-            workers.push(Worker::new(id)); // ids == index no.
+            workers.push(Worker::new(id, Arc::clone(&receiver))); // ids == index no.
         }
 
         ThreadPool { workers, sender }
