@@ -12,17 +12,25 @@ struct Worker {
 }
 
 impl Worker {
+    /// Create a new job worker with its own thread
     fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
-        let thread = spawn(|| {
-            // run when thread is created
-            // give it a receiving end in the thread that the workers spawn
-            receiver;
+        let thread = spawn(move || // run infinitely when thread is created
+            loop {
+                // call lock to acquire the mutex, might fail if mutex is in a 'poisoned' state
+                // which happens if another thread panics while holding the lock
+                // this blocks so only one thread at a time is ever waiting for a job
+            let job = receiver.lock().expect("receiver lock poisoned by another thread").recv().expect("thread holding sending side of channel has shutdown");
+            
+            println!("Worker {} got a job, executing.", id);
+
+            job(); // we can execute any function here, sent to this worker
         });
         Worker { id, thread }
     }
 }
 
-struct Job;
+// https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
+type Job = Box<dyn FnOnce() + Send + 'static>; // type aliases allow us to make long types shorter
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
@@ -64,5 +72,8 @@ impl ThreadPool {
     where
         F: FnOnce() + Send + 'static,
     {
+        let job = Box::new(f);
+
+        self.sender.send(job).unwrap();
     }
 }

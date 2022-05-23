@@ -33,7 +33,7 @@ fn handle_connection(mut stream: TcpStream) {
     // read http get request
     let mut buffer = [0; 1024]; // 1024 bytes in size
     stream.read(&mut buffer).unwrap();
-    println!("Request {}", String::from_utf8_lossy(&buffer[..]));
+    // println!("Request {}", String::from_utf8_lossy(&buffer[..]));
     // The “lossy” part of the name indicates the behavior of this function when it sees an invalid UTF-8 sequence
 
     // respond to http get request
