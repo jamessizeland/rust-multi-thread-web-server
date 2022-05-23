@@ -1,9 +1,28 @@
-pub struct ThreadPool;
+use std::thread::JoinHandle;
+
+pub struct ThreadPool {
+    threads: Vec<JoinHandle<()>>,
+}
 
 impl ThreadPool {
     /// Create a new threadpool of finite size
+    ///
+    /// The size is the number of threads in the pool.
+    ///
+    /// # Panics
+    ///
+    /// The `new` function will panic if the size is zero.
+    // pub fn new(size: usize) -> Result<ThreadPool, PoolCreationError> {
     pub fn new(size: usize) -> ThreadPool {
-        ThreadPool
+        assert!(size > 0); // unrecoverable error if zero entered
+
+        let mut threads = Vec::with_capacity(size); // like vec::new but preallocates space in the vector
+
+        for _ in 0..size {
+            // create some threads and store them in the vector
+        }
+
+        ThreadPool { threads }
     }
     /// Similar to thread::spawn but finite
     ///

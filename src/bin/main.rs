@@ -12,7 +12,7 @@ use webserver::ThreadPool;
 ///
 /// Because we’re writing a basic server just for learning purposes, we won’t worry about handling these kinds of errors; instead, we use unwrap to stop the program if errors happen.
 fn main() {
-    println!("Hello, from my slow web service");
+    println!("Hello, from my multithreaded web service");
     let listener = TcpListener::bind("localhost:7878").unwrap();
     let pool = ThreadPool::new(4);
 
