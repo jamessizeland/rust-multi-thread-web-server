@@ -1,7 +1,22 @@
-use std::thread::JoinHandle;
+use std::thread::{spawn, JoinHandle};
+
+/// Worker waits for orders and then executes them in its open thread
+///
+/// Instead of storing a vector of JoinHandle<()> instances in the thread pool, we’ll store instances of the Worker struct. Each Worker will store a single JoinHandle<()> instance. Then we’ll implement a method on Worker that will take a closure of code to run and send it to the already running thread for execution. We’ll also give each worker an id so we can distinguish between the different workers in the pool when logging or debugging.
+pub struct Worker {
+    id: usize,
+    thread: JoinHandle<()>,
+}
+
+impl Worker {
+    fn new(id: usize) -> Worker {
+        let thread = spawn(|| {}); // empty closure
+        Worker { id, thread }
+    }
+}
 
 pub struct ThreadPool {
-    threads: Vec<JoinHandle<()>>,
+    workers: Vec<Worker>,
 }
 
 impl ThreadPool {
@@ -16,13 +31,14 @@ impl ThreadPool {
     pub fn new(size: usize) -> ThreadPool {
         assert!(size > 0); // unrecoverable error if zero entered
 
-        let mut threads = Vec::with_capacity(size); // like vec::new but preallocates space in the vector
+        let mut workers = Vec::with_capacity(size); // like vec::new but preallocates space in the vector
 
-        for _ in 0..size {
+        for id in 0..size {
             // create some threads and store them in the vector
+            workers.push(Worker::new(id));
         }
 
-        ThreadPool { threads }
+        ThreadPool { workers }
     }
     /// Similar to thread::spawn but finite
     ///
