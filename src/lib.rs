@@ -3,6 +3,14 @@ use std::{
     thread::{spawn, JoinHandle},
 };
 
+// https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
+type Job = Box<dyn FnOnce() + Send + 'static>; // type aliases allow us to make long types shorter
+
+enum Message {
+    NewJob(Job),
+    Terminate,
+}
+
 /// Worker waits for orders and then executes them in its open thread
 ///
 /// Instead of storing a vector of JoinHandle<()> instances in the thread pool, we’ll store instances of the Worker struct. Each Worker will store a single JoinHandle<()> instance. Then we’ll implement a method on Worker that will take a closure of code to run and send it to the already running thread for execution. We’ll also give each worker an id so we can distinguish between the different workers in the pool when logging or debugging.
@@ -13,28 +21,33 @@ struct Worker {
 
 impl Worker {
     /// Create a new job worker with its own thread
-    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Message>>>) -> Worker {
         let thread = spawn(move || // run infinitely when thread is created
             loop {
                 // call lock to acquire the mutex, might fail if mutex is in a 'poisoned' state
                 // which happens if another thread panics while holding the lock
                 // this blocks so only one thread at a time is ever waiting for a job
-            let job = receiver.lock().expect("receiver lock poisoned by another thread").recv().expect("thread holding sending side of channel has shutdown");
+            let message = receiver.lock().expect("receiver lock poisoned by another thread").recv().expect("thread holding sending side of channel has shutdown");
             
-            println!("Worker {} got a job, executing.", id);
-
-            job(); // we can execute any function here, sent to this worker
+            match message {
+                Message::NewJob(job) => {
+                    println!("Worker {} got a job, executing.", id);
+                    job(); // we can execute any function here, sent to this worker
+                }
+                Message::Terminate => {
+                    println!("Worker {} was told to terminate", id);
+                    break; // off ramp out of this infinite loop
+                }
+            }
         });
         Worker { id, thread: Some(thread) }
     }
 }
 
-// https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
-type Job = Box<dyn FnOnce() + Send + 'static>; // type aliases allow us to make long types shorter
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
-    sender: mpsc::Sender<Job>,
+    sender: mpsc::Sender<Message>,
 }
 
 impl ThreadPool {
@@ -74,7 +87,7 @@ impl ThreadPool {
     {
         let job = Box::new(f);
 
-        self.sender.send(job).unwrap();
+        self.sender.send(Message::NewJob(job)).unwrap();
     }
 }
 
