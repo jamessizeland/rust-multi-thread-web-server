@@ -93,6 +93,13 @@ impl ThreadPool {
 
 impl Drop for ThreadPool {
     fn drop(&mut self) {
+        println!("Sending terminate message to all workers.");
+        for _ in &self.workers {
+            // Each worker will stop receiving requests on the channel once it gets a terminate message. So, we can be sure that if we send the same number of terminate messages as there are workers, each worker will receive a terminate message before join is called on its thread.
+            self.sender.send(Message::Terminate).unwrap();
+        }
+        println!("Shutting down all workers.");
+
         for worker in &mut self.workers {
             println!("Shutting down worker {}", worker.id);
 
